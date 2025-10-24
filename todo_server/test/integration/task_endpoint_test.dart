@@ -17,7 +17,8 @@ void main() {
       expect(created.completed, isFalse);
 
       // List includes
-      final list1 = await endpoints.task.list(sessionBuilder);
+      final list1 =
+          await endpoints.task.list(sessionBuilder, limit: 20, offset: 0);
       expect(list1.any((t) => t.id == created.id), isTrue);
 
       // Update
@@ -35,7 +36,8 @@ void main() {
       // Delete
       final ok = await endpoints.task.delete(sessionBuilder, created.id!);
       expect(ok, isTrue);
-      final list2 = await endpoints.task.list(sessionBuilder);
+      final list2 =
+          await endpoints.task.list(sessionBuilder, limit: 20, offset: 0);
       expect(list2.any((t) => t.id == created.id), isFalse);
     });
   });

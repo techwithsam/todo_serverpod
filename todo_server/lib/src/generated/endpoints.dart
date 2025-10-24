@@ -79,8 +79,8 @@ class Endpoints extends _i1.EndpointDispatch {
           ) async =>
               (endpoints['task'] as _i3.TaskEndpoint).list(
             session,
-            params['limit'],
-            params['offset'],
+            limit: params['limit'],
+            offset: params['offset'],
           ),
         ),
         'getById': _i1.MethodConnector(

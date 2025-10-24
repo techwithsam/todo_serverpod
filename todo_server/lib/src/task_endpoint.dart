@@ -11,8 +11,11 @@ class TaskEndpoint extends Endpoint {
 
   /// Returns tasks with paging.
   /// [limit] max rows to return, [offset] number of rows to skip.
-  Future<List<Task>> list(Session session,
-      [int limit = 20, int offset = 0]) async {
+  Future<List<Task>> list(
+    Session session, {
+    int limit = 20,
+    int offset = 0,
+  }) async {
     return Task.db.find(
       session,
       limit: limit,

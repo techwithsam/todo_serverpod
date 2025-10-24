@@ -40,6 +40,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
+      debugShowCheckedModeBanner: false,
       home: const TaskListScreen(),
     );
   }
@@ -129,7 +130,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
         _tasks = [];
         _hasMore = true;
       });
-      final tasks = await client.task.list(_pageSize, 0);
+      final tasks = await client.task.list(limit: _pageSize, offset: 0);
       setState(() {
         _tasks = tasks;
         _isLoading = false;
@@ -157,7 +158,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
     setState(() => _isLoadingMore = true);
     try {
       final nextOffset = _tasks.length;
-      final more = await client.task.list(_pageSize, nextOffset);
+      final more = await client.task.list(limit: _pageSize, offset: nextOffset);
       setState(() {
         _tasks.addAll(more);
         _hasMore = more.length == _pageSize;

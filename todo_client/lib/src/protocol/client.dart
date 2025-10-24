@@ -43,10 +43,10 @@ class EndpointTask extends _i1.EndpointRef {
 
   /// Returns tasks with paging.
   /// [limit] max rows to return, [offset] number of rows to skip.
-  _i2.Future<List<_i4.Task>> list([
-    int limit,
-    int offset,
-  ]) =>
+  _i2.Future<List<_i4.Task>> list({
+    required int limit,
+    required int offset,
+  }) =>
       caller.callServerEndpoint<List<_i4.Task>>(
         'task',
         'list',

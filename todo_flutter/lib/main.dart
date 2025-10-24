@@ -75,7 +75,11 @@ class _TaskListScreenState extends State<TaskListScreen> {
           setState(() {
             switch (message.type) {
               case 'created':
-                if (message.task != null) _tasks.add(message.task!);
+                if (message.task != null) {
+                  // Deduplicate if we already added optimistically
+                  final exists = _tasks.any((t) => t.id == message.task!.id);
+                  if (!exists) _tasks.add(message.task!);
+                }
                 break;
               case 'updated':
                 if (message.task != null) {
@@ -147,9 +151,15 @@ class _TaskListScreenState extends State<TaskListScreen> {
   /// Create a new task on the server
   Future<void> _createTask(String title) async {
     try {
-      await client.task.create(Task(title: title, completed: false));
-      // Reload list to reflect changes (real-time update would be ideal)
-      await _loadTasks();
+      final created =
+          await client.task.create(Task(title: title, completed: false));
+      // Optimistic update: add immediately; real-time event will be deduped.
+      setState(() {
+        final exists = _tasks.any((t) => t.id == created.id);
+        if (!exists) {
+          _tasks.add(created);
+        }
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -162,9 +172,13 @@ class _TaskListScreenState extends State<TaskListScreen> {
   /// Toggle task completion
   Future<void> _toggleTask(Task task) async {
     try {
-      await client.task.update(task.copyWith(completed: !task.completed));
-      // Reload list to reflect changes
-      await _loadTasks();
+      final updated =
+          await client.task.update(task.copyWith(completed: !task.completed));
+      // Optimistic: replace in place (idempotent with event listener)
+      setState(() {
+        final i = _tasks.indexWhere((t) => t.id == updated.id);
+        if (i != -1) _tasks[i] = updated;
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -177,13 +191,57 @@ class _TaskListScreenState extends State<TaskListScreen> {
   /// Delete a task
   Future<void> _deleteTask(int id) async {
     try {
+      // Optimistic: remove locally first
+      setState(() {
+        _tasks.removeWhere((t) => t.id == id);
+      });
       await client.task.delete(id);
-      // Reload list to reflect changes
-      await _loadTasks();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to delete task: $e')),
+        );
+      }
+    }
+  }
+
+  /// Rename a task (edit title)
+  Future<void> _renameTask(Task task) async {
+    final controller = TextEditingController(text: task.title);
+    final newTitle = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rename Task'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'New title'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (newTitle == null || newTitle.isEmpty || newTitle == task.title) return;
+
+    try {
+      final updated = await client.task.update(task.copyWith(title: newTitle));
+      setState(() {
+        final i = _tasks.indexWhere((t) => t.id == updated.id);
+        if (i != -1) _tasks[i] = updated;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to rename task: $e')),
         );
       }
     }
@@ -270,9 +328,18 @@ class _TaskListScreenState extends State<TaskListScreen> {
               ),
             ),
             onTap: () => _toggleTask(task),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_outline),
-              onPressed: () => _deleteTask(task.id!),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => _renameTask(task),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () => _deleteTask(task.id!),
+                ),
+              ],
             ),
           ),
         );

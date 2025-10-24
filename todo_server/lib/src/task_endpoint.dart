@@ -1,9 +1,13 @@
 import 'package:serverpod/serverpod.dart';
+
 import 'generated/protocol.dart';
 
 /// Endpoint providing CRUD operations for [Task] along with real-time updates.
 class TaskEndpoint extends Endpoint {
-  static const String channel = 'tasks';
+  // Use the endpoint name 'task' as the channel so client EndpointRef.stream
+  // receives messages (the client routes websocket messages by endpoint
+  // name). This allows clients to listen on `client.task.stream`.
+  static const String channel = 'task';
 
   /// Returns all tasks.
   Future<List<Task>> list(Session session) async {

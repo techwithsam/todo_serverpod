@@ -1,6 +1,6 @@
-import 'package:todo_client/todo_client.dart';
 import 'package:flutter/material.dart';
 import 'package:serverpod_flutter/serverpod_flutter.dart';
+import 'package:todo_client/todo_client.dart';
 
 /// Sets up a global client object that can be used to talk to the server from
 /// anywhere in our app. The client is generated from your server code
@@ -35,111 +35,248 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Serverpod Demo',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const MyHomePage(title: 'Serverpod Example'),
+      title: 'Todo App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        useMaterial3: true,
+      ),
+      home: const TaskListScreen(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
+class TaskListScreen extends StatefulWidget {
+  const TaskListScreen({super.key});
 
   @override
-  MyHomePageState createState() => MyHomePageState();
+  State<TaskListScreen> createState() => _TaskListScreenState();
 }
 
-class MyHomePageState extends State<MyHomePage> {
-  /// Holds the last result or null if no result exists yet.
-  String? _resultMessage;
-
-  /// Holds the last error message that we've received from the server or null
-  /// if no error exists yet.
+class _TaskListScreenState extends State<TaskListScreen> {
+  List<Task> _tasks = [];
+  bool _isLoading = true;
   String? _errorMessage;
 
-  final _textEditingController = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+    // Open streaming connection and listen to the Task endpoint stream for
+    // real-time TaskEvent updates. The server publishes TaskEvent objects to
+    // the endpoint name 'task'.
+    _initRealtime();
+  }
 
-  /// Calls the `hello` method of the `greeting` endpoint. Will set either the
-  /// `_resultMessage` or `_errorMessage` field, depending on if the call
-  /// is successful.
-  void _callHello() async {
+  Future<void> _initRealtime() async {
     try {
-      final result = await client.greeting.hello(_textEditingController.text);
+      await client.openStreamingConnection();
+      client.task.stream.listen((message) {
+        if (message is TaskEvent) {
+          setState(() {
+            switch (message.type) {
+              case 'created':
+                if (message.task != null) _tasks.add(message.task!);
+                break;
+              case 'updated':
+                if (message.task != null) {
+                  final i = _tasks.indexWhere((t) => t.id == message.task!.id);
+                  if (i != -1) _tasks[i] = message.task!;
+                }
+                break;
+              case 'deleted':
+                _tasks.removeWhere((t) => t.id == message.id);
+                break;
+            }
+          });
+        }
+      });
+    } catch (e) {
+      // If streaming fails, we silently ignore — UI will still work via
+      // manual refresh. Consider showing a banner in production.
+    }
+  }
+
+  /// Load all tasks from the server on init
+  Future<void> _loadTasks() async {
+    try {
+      final tasks = await client.task.list();
       setState(() {
+        _tasks = tasks;
+        _isLoading = false;
         _errorMessage = null;
-        _resultMessage = result.message;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = '$e';
+        _errorMessage = 'Failed to load tasks: $e';
+        _isLoading = false;
       });
+    }
+  }
+
+  /// Show dialog to create a new task
+  Future<void> _showAddTaskDialog() async {
+    final controller = TextEditingController();
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Task'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'Task title'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                _createTask(controller.text);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Create a new task on the server
+  Future<void> _createTask(String title) async {
+    try {
+      await client.task.create(Task(title: title, completed: false));
+      // Reload list to reflect changes (real-time update would be ideal)
+      await _loadTasks();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create task: $e')),
+        );
+      }
+    }
+  }
+
+  /// Toggle task completion
+  Future<void> _toggleTask(Task task) async {
+    try {
+      await client.task.update(task.copyWith(completed: !task.completed));
+      // Reload list to reflect changes
+      await _loadTasks();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update task: $e')),
+        );
+      }
+    }
+  }
+
+  /// Delete a task
+  Future<void> _deleteTask(int id) async {
+    try {
+      await client.task.delete(id);
+      // Reload list to reflect changes
+      await _loadTasks();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete task: $e')),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: TextField(
-                controller: _textEditingController,
-                decoration: const InputDecoration(hintText: 'Enter your name'),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: ElevatedButton(
-                onPressed: _callHello,
-                child: const Text('Send to Server'),
-              ),
-            ),
-            ResultDisplay(
-              resultMessage: _resultMessage,
-              errorMessage: _errorMessage,
-            ),
-          ],
-        ),
+      appBar: AppBar(
+        title: const Text('Tasks'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadTasks,
+          ),
+        ],
+      ),
+      body: _buildBody(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddTaskDialog,
+        child: const Icon(Icons.add),
       ),
     );
   }
-}
 
-/// ResultDisplays shows the result of the call. Either the returned result
-/// from the `example.greeting` endpoint method or an error message.
-class ResultDisplay extends StatelessWidget {
-  final String? resultMessage;
-  final String? errorMessage;
-
-  const ResultDisplay({super.key, this.resultMessage, this.errorMessage});
-
-  @override
-  Widget build(BuildContext context) {
-    String text;
-    Color backgroundColor;
-    if (errorMessage != null) {
-      backgroundColor = Colors.red[300]!;
-      text = errorMessage!;
-    } else if (resultMessage != null) {
-      backgroundColor = Colors.green[300]!;
-      text = resultMessage!;
-    } else {
-      backgroundColor = Colors.grey[300]!;
-      text = 'No server response yet.';
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
     }
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 50),
-      child: Container(
-        color: backgroundColor,
-        child: Center(child: Text(text)),
-      ),
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadTasks,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_tasks.isEmpty) {
+      return const Center(
+        child: Text(
+          'No tasks yet.\nTap + to add one!',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: _tasks.length,
+      itemBuilder: (context, index) {
+        final task = _tasks[index];
+        return Dismissible(
+          key: Key('task_${task.id}'),
+          background: Container(
+            color: Colors.red,
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 16),
+            child: const Icon(Icons.delete, color: Colors.white),
+          ),
+          direction: DismissDirection.endToStart,
+          onDismissed: (_) => _deleteTask(task.id!),
+          child: ListTile(
+            leading: Checkbox(
+              value: task.completed,
+              onChanged: (_) => _toggleTask(task),
+            ),
+            title: Text(
+              task.title,
+              style: TextStyle(
+                decoration: task.completed ? TextDecoration.lineThrough : null,
+                color: task.completed ? Colors.grey : null,
+              ),
+            ),
+            onTap: () => _toggleTask(task),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () => _deleteTask(task.id!),
+            ),
+          ),
+        );
+      },
     );
   }
 }

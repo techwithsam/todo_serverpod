@@ -41,12 +41,19 @@ class EndpointTask extends _i1.EndpointRef {
   @override
   String get name => 'task';
 
-  /// Returns all tasks.
-  _i2.Future<List<_i4.Task>> list() =>
+  /// Returns tasks with paging.
+  /// [limit] max rows to return, [offset] number of rows to skip.
+  _i2.Future<List<_i4.Task>> list([
+    int limit,
+    int offset,
+  ]) =>
       caller.callServerEndpoint<List<_i4.Task>>(
         'task',
         'list',
-        {},
+        {
+          'limit': limit,
+          'offset': offset,
+        },
       );
 
   /// Returns a task by [id], or null if not found.

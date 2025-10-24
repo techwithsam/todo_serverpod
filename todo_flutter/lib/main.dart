@@ -57,11 +57,15 @@ class _TaskListScreenState extends State<TaskListScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   VoidCallback? _statusListener;
+  final _scrollController = ScrollController();
+  static const int _pageSize = 20;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
 
   @override
   void initState() {
     super.initState();
-    _loadTasks();
+    _loadInitial();
     // Open streaming connection and listen to the Task endpoint stream for
     // real-time TaskEvent updates. The server publishes TaskEvent objects to
     // the endpoint name 'task'.
@@ -71,6 +75,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
       if (mounted) setState(() {});
     };
     client.addStreamingConnectionStatusListener(_statusListener!);
+
+    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -78,6 +84,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
     if (_statusListener != null) {
       client.removeStreamingConnectionStatusListener(_statusListener!);
     }
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -114,20 +121,55 @@ class _TaskListScreenState extends State<TaskListScreen> {
     }
   }
 
-  /// Load all tasks from the server on init
-  Future<void> _loadTasks() async {
+  /// Initial load resets list and fetches first page
+  Future<void> _loadInitial() async {
     try {
-      final tasks = await client.task.list();
+      setState(() {
+        _isLoading = true;
+        _tasks = [];
+        _hasMore = true;
+      });
+      final tasks = await client.task.list(_pageSize, 0);
       setState(() {
         _tasks = tasks;
         _isLoading = false;
         _errorMessage = null;
+        _hasMore = tasks.length == _pageSize;
       });
     } catch (e) {
       setState(() {
         _errorMessage = 'Failed to load tasks: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  void _onScroll() {
+    if (!_hasMore || _isLoadingMore || _isLoading) return;
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore) return;
+    setState(() => _isLoadingMore = true);
+    try {
+      final nextOffset = _tasks.length;
+      final more = await client.task.list(_pageSize, nextOffset);
+      setState(() {
+        _tasks.addAll(more);
+        _hasMore = more.length == _pageSize;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load more: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingMore = false);
     }
   }
 
@@ -269,7 +311,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadTasks,
+            onPressed: _loadInitial,
           ),
         ],
       ),
@@ -335,7 +377,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _loadTasks,
+              onPressed: _loadInitial,
               child: const Text('Retry'),
             ),
           ],
@@ -354,6 +396,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
     }
 
     return ListView.builder(
+      controller: _scrollController,
       itemCount: _tasks.length,
       itemBuilder: (context, index) {
         final task = _tasks[index];

@@ -9,11 +9,14 @@ class TaskEndpoint extends Endpoint {
   // name). This allows clients to listen on `client.task.stream`.
   static const String channel = 'task';
 
-  /// Returns all tasks.
-  Future<List<Task>> list(Session session) async {
-    // Deterministic ordering by id ascending
+  /// Returns tasks with paging.
+  /// [limit] max rows to return, [offset] number of rows to skip.
+  Future<List<Task>> list(Session session,
+      [int limit = 20, int offset = 0]) async {
     return Task.db.find(
       session,
+      limit: limit,
+      offset: offset,
       orderBy: (t) => t.id,
       orderDescending: false,
     );

@@ -56,6 +56,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
   List<Task> _tasks = [];
   bool _isLoading = true;
   String? _errorMessage;
+  VoidCallback? _statusListener;
 
   @override
   void initState() {
@@ -65,6 +66,19 @@ class _TaskListScreenState extends State<TaskListScreen> {
     // real-time TaskEvent updates. The server publishes TaskEvent objects to
     // the endpoint name 'task'.
     _initRealtime();
+    // Listen to streaming connection status changes and update a banner.
+    _statusListener = () {
+      if (mounted) setState(() {});
+    };
+    client.addStreamingConnectionStatusListener(_statusListener!);
+  }
+
+  @override
+  void dispose() {
+    if (_statusListener != null) {
+      client.removeStreamingConnectionStatusListener(_statusListener!);
+    }
+    super.dispose();
   }
 
   Future<void> _initRealtime() async {
@@ -259,10 +273,48 @@ class _TaskListScreenState extends State<TaskListScreen> {
           ),
         ],
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          _buildStatusBanner(),
+          Expanded(child: _buildBody()),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddTaskDialog,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildStatusBanner() {
+    final status = client.streamingConnectionStatus;
+    Color bg;
+    String text;
+    switch (status) {
+      case StreamingConnectionStatus.connected:
+        bg = Colors.green.shade100;
+        text = 'Live: Connected';
+        break;
+      case StreamingConnectionStatus.connecting:
+        bg = Colors.orange.shade100;
+        text = 'Live: Connecting…';
+        break;
+      case StreamingConnectionStatus.waitingToRetry:
+        bg = Colors.orange.shade100;
+        text = 'Live: Retrying…';
+        break;
+      case StreamingConnectionStatus.disconnected:
+        bg = Colors.red.shade100;
+        text = 'Live: Disconnected';
+        break;
+    }
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      color: bg,
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 12),
       ),
     );
   }

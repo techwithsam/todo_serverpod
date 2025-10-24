@@ -11,7 +11,12 @@ class TaskEndpoint extends Endpoint {
 
   /// Returns all tasks.
   Future<List<Task>> list(Session session) async {
-    return Task.db.find(session);
+    // Deterministic ordering by id ascending
+    return Task.db.find(
+      session,
+      orderBy: (t) => t.id,
+      orderDescending: false,
+    );
   }
 
   /// Returns a task by [id], or null if not found.

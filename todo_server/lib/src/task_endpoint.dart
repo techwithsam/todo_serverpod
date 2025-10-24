@@ -1,21 +1,18 @@
-import 'generated/protocol.dart';
 import 'package:serverpod/serverpod.dart';
+import 'generated/protocol.dart';
 
-/// Endpoint providing CRUD operations for [Task].
+/// Endpoint providing CRUD operations for [Task] along with real-time updates.
 class TaskEndpoint extends Endpoint {
   static const String channel = 'tasks';
 
   /// Returns all tasks.
   Future<List<Task>> list(Session session) async {
-    return await Task.db.find(session);
+    return Task.db.find(session);
   }
 
   /// Returns a task by [id], or null if not found.
   Future<Task?> getById(Session session, int id) async {
-    return await Task.db.findFirstRow(
-      session,
-      where: (t) => t.id.equals(id),
-    );
+    return Task.db.findById(session, id);
   }
 
   /// Creates a new task. Returns the created row with id set.
@@ -44,11 +41,11 @@ class TaskEndpoint extends Endpoint {
 
   /// Deletes a task by [id]. Returns true if a row was deleted.
   Future<bool> delete(Session session, int id) async {
-    final numDeleted = await Task.db.deleteWhere(
+    final deletedRows = await Task.db.deleteWhere(
       session,
       where: (t) => t.id.equals(id),
     );
-    if (numDeleted > 0) {
+    if (deletedRows.isNotEmpty) {
       await session.messages.postMessage(
         channel,
         TaskEvent(type: 'deleted', task: null, id: id),

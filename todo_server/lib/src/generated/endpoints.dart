@@ -11,6 +11,8 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/serverpod.dart' as _i1;
 import '../greeting_endpoint.dart' as _i2;
+import '../task_endpoint.dart' as _i3;
+import 'package:todo_server/src/generated/task.dart' as _i4;
 
 class Endpoints extends _i1.EndpointDispatch {
   @override
@@ -21,7 +23,13 @@ class Endpoints extends _i1.EndpointDispatch {
           server,
           'greeting',
           null,
-        )
+        ),
+      'task': _i3.TaskEndpoint()
+        ..initialize(
+          server,
+          'task',
+          null,
+        ),
     };
     connectors['greeting'] = _i1.EndpointConnector(
       name: 'greeting',
@@ -45,6 +53,93 @@ class Endpoints extends _i1.EndpointDispatch {
             params['name'],
           ),
         )
+      },
+    );
+    connectors['task'] = _i1.EndpointConnector(
+      name: 'task',
+      endpoint: endpoints['task']!,
+      methodConnectors: {
+        'list': _i1.MethodConnector(
+          name: 'list',
+          params: {},
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['task'] as _i3.TaskEndpoint).list(session),
+        ),
+        'getById': _i1.MethodConnector(
+          name: 'getById',
+          params: {
+            'id': _i1.ParameterDescription(
+              name: 'id',
+              type: _i1.getType<int>(),
+              nullable: false,
+            )
+          },
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['task'] as _i3.TaskEndpoint).getById(
+            session,
+            params['id'],
+          ),
+        ),
+        'create': _i1.MethodConnector(
+          name: 'create',
+          params: {
+            'task': _i1.ParameterDescription(
+              name: 'task',
+              type: _i1.getType<_i4.Task>(),
+              nullable: false,
+            )
+          },
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['task'] as _i3.TaskEndpoint).create(
+            session,
+            params['task'],
+          ),
+        ),
+        'update': _i1.MethodConnector(
+          name: 'update',
+          params: {
+            'task': _i1.ParameterDescription(
+              name: 'task',
+              type: _i1.getType<_i4.Task>(),
+              nullable: false,
+            )
+          },
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['task'] as _i3.TaskEndpoint).update(
+            session,
+            params['task'],
+          ),
+        ),
+        'delete': _i1.MethodConnector(
+          name: 'delete',
+          params: {
+            'id': _i1.ParameterDescription(
+              name: 'id',
+              type: _i1.getType<int>(),
+              nullable: false,
+            )
+          },
+          call: (
+            _i1.Session session,
+            Map<String, dynamic> params,
+          ) async =>
+              (endpoints['task'] as _i3.TaskEndpoint).delete(
+            session,
+            params['id'],
+          ),
+        ),
       },
     );
   }

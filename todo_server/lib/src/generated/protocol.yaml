@@ -1,2 +1,8 @@
 greeting:
   - hello:
+task:
+  - list:
+  - getById:
+  - create:
+  - update:
+  - delete:

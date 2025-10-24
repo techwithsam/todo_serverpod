@@ -1,0 +1,7 @@
+# Event message for live updates
+class: TaskEvent
+
+fields:
+  type: String # 'created' | 'updated' | 'deleted'
+  task: Task?
+  id: int?

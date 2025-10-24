@@ -1,0 +1,11 @@
+# Task model mapped to database table
+class: Task
+
+# Database table name
+table: task
+
+# Fields
+fields:
+  id: int?
+  title: String
+  completed: bool

@@ -5,8 +5,7 @@ A minimal, full‑stack Todo app demonstrating Serverpod (Dart) backend + Flutte
 
 <!-- Visual / Screenshots -->
 <p align="center">
-  <img src="./assets/screenshots/phone.png" alt="App screenshot" width="320" />
-  <img src="./assets/screenshots/web.png" alt="Web screenshot" width="480" />
+  <img src="./screenshots/presentation.png" alt="App screenshot" width="1000" />
 </p>
 
 ---
@@ -87,6 +86,10 @@ Prereqs: Docker, Flutter, Dart SDK (for server).
    curl http://localhost:8080/
    ```
 
+<p align="center">
+  <img src="./screenshots/presentation-2.png" alt="App screenshot" width="1000" />
+</p>
+
 ---
 
 ## Development tips
@@ -125,6 +128,10 @@ Quick notes:
 - Keep UI screenshots in `todo_flutter/assets/screenshots/`
 
 ---
+
+<p align="center">
+  <a href="https://www.youtube.com/playlist?list=PLMfrNHAjWCoBLkkknD1iBOD-rUsejTWlj"> <img src="./screenshots/presentation-1.png" alt="App screenshot" width="1000" /></a>
+</p>
 
 ## License
 

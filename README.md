@@ -1,11 +1,12 @@
-# Todo (Serverpod + Flutter) — Samuel Adekunle ~ FlutterByte's Conference '25
+# Todo (Serverpod + Flutter) ~ { Samuel A. } FlutterByte's Conference '25
+
 [![Serverpod](https://img.shields.io/badge/Serverpod-Backend-blue)](https://docs.serverpod.dev) [![Flutter](https://img.shields.io/badge/Flutter-Client-02569B)](https://flutter.dev) [![License](https://img.shields.io/badge/License-MIT-lightgrey)]
 
 A minimal, full‑stack Todo app demonstrating Serverpod (Dart) backend + Flutter client with a generated client package.
 
 <!-- Visual / Screenshots -->
 <p align="center">
-  <img src="./screenshots/presentation.png" alt="App screenshot" width="1000" />
+  <a href = "https://docs.google.com/presentation/d/155jfYUI2EHk207CNKTTjIHgO18svoSnG-6dgxdfzUTg/edit?usp=sharing"> <img src="./screenshots/presentation.png" alt="App screenshot" width="1000" /></a>
 </p>
 
 ---
